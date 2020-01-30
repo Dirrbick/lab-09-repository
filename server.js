@@ -26,7 +26,8 @@ app.get('/wrong', (request, response) => {
 
 //Callback functions for information
 app.get('/location', locationCallback);
-// app.get('/weather', weatherCallback);
+app.get('/weather', weatherCallback);
+app.get('/events', eventHandler);
 
 
 // location callback
@@ -84,9 +85,10 @@ function weatherCallback(request, response) {
 
 // eventHandler function
 function eventHandler(request, response) {
-  let city = request.query.search_query;
+  let city = request.query.searchQuery;
+  console.log(request.query, 'this is the request');
   const url = `http://api.eventful.com/json/events/search?app_key=${process.env.EVENTFUL_API_KEY}&location=${city}&date=Future`
-
+  console.log(url);
   superagent.get(url)
     .then(data => {
       let responseJson = JSON.parse(data.text);
@@ -130,7 +132,7 @@ function errorHandler(error, request, response) {
 
 // server listener
 client.connect()
-  .then(() => {
+  .then( () => {
     app.listen(PORT, () => {
       console.log(`server up on ${PORT}`)
     })
