@@ -7,8 +7,7 @@ const express = require('express');
 const cors = require('cors');
 const superagent = require('superagent');
 const pg = require('pg');
-
-const PORT = process.env.PORT;
+const PORT = process.env.PORT || 3000;
 const app = express();
 app.use(cors());
 
@@ -24,10 +23,12 @@ app.get('/wrong', (request, response) => {
   response.send('OOPS! You did it again. Wrong route.');
 });
 
-//Callback functions for information
+//Respond to front-end requests
 app.get('/location', locationCallback);
 app.get('/weather', weatherCallback);
 app.get('/events', eventHandler);
+app.get('/movies', movieHandler);
+// app.get('/yelp', getYelp);
 
 
 // location callback
@@ -84,14 +85,15 @@ function weatherCallback(request, response) {
 }
 
 // eventHandler function
+
 function eventHandler(request, response) {
   let city = request.query.searchQuery;
-  console.log(request.query, 'this is the request');
   const url = `http://api.eventful.com/json/events/search?app_key=${process.env.EVENTFUL_API_KEY}&location=${city}&date=Future`
-  console.log(url);
+  
   superagent.get(url)
     .then(data => {
       let responseJson = JSON.parse(data.text);
+      
 
       const events = responseJson.events.event.map(data => {
         return new Event(data);
@@ -102,7 +104,43 @@ function eventHandler(request, response) {
       errorHandler('You are SUPER WRONG!', request, response);
     });
 }
-//constructor function for eventHandler
+
+//MovieHundler function
+
+function movieHandler(request, response) {
+  let city = request.query.searchQuery;
+  const url = `https://api.themoviedb.org/3/movie/550?api_key=${process.env.MOVIE_API_KEY}&query=${city}`
+   superagent
+  .get(url)
+  .then(data=> {
+    if(!data.body.results.length) {
+      throw "NO DATA";
+    }else {
+      const movies = data.body.results.map(data => {
+        return new Movie(data);
+      })
+      response.send(movies)
+    }
+  })
+  .catch(() => {
+    errorHandler('You are SUPER WRONG!', request, response);
+  });
+}
+
+                        //.......................API constractors................//
+
+//Movie constractor
+
+function Movie(movie) {
+  this.title = movie.title;
+  this.overview = movie.overview;
+  this.average_votes = movie.verage_votes;
+  this.image_url = `https://image.tmdb.org/t/p/w500/${movie.poster_path}`;
+  this.popularity = movie.popularity;
+  this.released_on = movie.released_on;
+}
+
+//eventHandler constructor
 
 function Event(event) {
   this.link = event.url;
