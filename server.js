@@ -7,7 +7,7 @@ const express = require('express');
 const cors = require('cors');
 const superagent = require('superagent');
 const pg = require('pg');
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT;
 const app = express();
 app.use(cors());
 
@@ -109,23 +109,21 @@ function eventHandler(request, response) {
 
 function movieHandler(request, response) {
   let city = request.query.searchQuery;
-  const url = `https://api.themoviedb.org/3/movie/550?api_key=${process.env.MOVIE_API_KEY}&query=${city}`
-   superagent
-  .get(url)
+  const url = `https://api.themoviedb.org/3/search/movie?api_key=${process.env.MOVIE_API_KEY}&language=en-US&query=movies&page=1&include_adult=false&region=${city}`
+  superagent.get(url)
   .then(data=> {
-    if(!data.body.results.length) {
-      throw "NO DATA";
-    }else {
-      const movies = data.body.results.map(data => {
-        return new Movie(data);
-      })
-      response.send(movies)
-    }
+    const movies = JSON.parse(data.text).results.map(obj => {
+      // console.log(obj);
+      return new Movie(obj);
+    });
+    console.log(movies);
+    response.send(movies)
   })
   .catch(() => {
-    errorHandler('You are SUPER WRONG!', request, response);
+        errorHandler('You are SUPER WRONG!', request, response);
   });
 }
+
 
                         //.......................API constractors................//
 
@@ -134,10 +132,10 @@ function movieHandler(request, response) {
 function Movie(movie) {
   this.title = movie.title;
   this.overview = movie.overview;
-  this.average_votes = movie.verage_votes;
-  this.image_url = `https://image.tmdb.org/t/p/w500/${movie.poster_path}`;
+  this.average_votes = movie.vote_average;
+  this.image_url = `https://image.tmdb.org/t/p/w500${movie.poster_path}`;
   this.popularity = movie.popularity;
-  this.released_on = movie.released_on;
+  this.released_on = movie.released_date;
 }
 
 //eventHandler constructor
