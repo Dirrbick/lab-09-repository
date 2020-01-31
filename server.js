@@ -62,7 +62,7 @@ function locationCallback (request, response) {
           errorHandler('Error 500! Something has gone wrong with the website server!', request, response);
         }
       }
-    })
+    });
 }
 
 // weather callback
@@ -88,7 +88,7 @@ function weatherCallback(request, response) {
 
 function eventHandler(request, response) {
   let city = request.query.searchQuery;
-  const url = `http://api.eventful.com/json/events/search?app_key=${process.env.EVENTFUL_API_KEY}&location=${city}&date=Future`
+  const url = `http://api.eventful.com/json/events/search?app_key=${process.env.EVENTFUL_API_KEY}&location=${city}&date=Future`;
   
   superagent.get(url)
     .then(data => {
@@ -109,45 +109,45 @@ function eventHandler(request, response) {
 
 function movieHandler(request, response) {
   let city = request.query.searchQuery;
-  const url = `https://api.themoviedb.org/3/search/movie?api_key=${process.env.MOVIE_API_KEY}&language=en-US&query=movies&page=1&include_adult=false&region=${city}`
+  const url = `https://api.themoviedb.org/3/search/movie?api_key=${process.env.MOVIE_API_KEY}&language=en-US&query=${city}&page=1&include_adult=false`;
   superagent.get(url)
-  .then(data=> {
-    const movies = JSON.parse(data.text).results.map(obj => {
-      return new Movie(obj);
+    .then(data=> {
+      const movies = JSON.parse(data.text).results.map(obj => {
+        return new Movie(obj);
+      });
+      response.send(movies);
+    })
+    .catch(() => {
+      errorHandler('You are SUPER WRONG!', request, response);
     });
-    response.send(movies)
-  })
-  .catch(() => {
-        errorHandler('You are SUPER WRONG!', request, response);
-  });
 }
 
 function yelpHandler(request, response) {
   let lat = request.query.latitude;
   let lon = request.query.longitude;
-  const url = `https://api.yelp.com/v3/businesses/search?term=delis&latitude=${lat}&longitude=${lon}`
+  const url = `https://api.yelp.com/v3/businesses/search?term=delis&latitude=${lat}&longitude=${lon}`;
   console.log(url);
   superagent.get(url).set('Authorization', `Bearer ${process.env.YELP_API_KEY}`)
-  .then(data=> {
-    console.log(JSON.parse(data.text).businesses)
-    const reviews = JSON.parse(data.text).businesses.map(obj => {
-      return new Yelp(obj);
+    .then(data=> {
+      console.log(JSON.parse(data.text).businesses);
+      const reviews = JSON.parse(data.text).businesses.map(obj => {
+        return new Yelp(obj);
+      });
+      response.send(reviews);
+    })
+    .catch(() => {
+      errorHandler('You are SUPER WRONG!', request, response);
     });
-    response.send(reviews)
-  })
-  .catch(() => {
-        errorHandler('You are SUPER WRONG!', request, response);
-  });
 
 }
 
 
-                        //.......................API constractors................//
+//.......................API constractors................//
 
 //yelp constractor
 
 function Yelp(review) {
-  this.name = review.title;
+  this.name = review.name;
   this.image_url = review.image_url;
   this.price = review.price;
   this.rating = review.rating;
@@ -197,6 +197,6 @@ function errorHandler(error, request, response) {
 client.connect()
   .then( () => {
     app.listen(PORT, () => {
-      console.log(`server up on ${PORT}`)
-    })
+      console.log(`server up on ${PORT}`);
+    });
   });
