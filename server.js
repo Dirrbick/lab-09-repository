@@ -28,7 +28,7 @@ app.get('/location', locationCallback);
 app.get('/weather', weatherCallback);
 app.get('/events', eventHandler);
 app.get('/movies', movieHandler);
-// app.get('/yelp', getYelp);
+app.get('/yelp', yelpHandler);
 
 
 // location callback
@@ -113,10 +113,8 @@ function movieHandler(request, response) {
   superagent.get(url)
   .then(data=> {
     const movies = JSON.parse(data.text).results.map(obj => {
-      // console.log(obj);
       return new Movie(obj);
     });
-    console.log(movies);
     response.send(movies)
   })
   .catch(() => {
@@ -124,8 +122,37 @@ function movieHandler(request, response) {
   });
 }
 
+function yelpHandler(request, response) {
+  let lat = request.query.latitude;
+  let lon = request.query.longitude;
+  const url = `https://api.yelp.com/v3/businesses/search?term=delis&latitude=${lat}&longitude=${lon}`
+  console.log(url);
+  superagent.get(url).set('Authorization', `Bearer ${process.env.YELP_API_KEY}`)
+  .then(data=> {
+    console.log(JSON.parse(data.text).businesses)
+    const reviews = JSON.parse(data.text).businesses.map(obj => {
+      return new Yelp(obj);
+    });
+    response.send(reviews)
+  })
+  .catch(() => {
+        errorHandler('You are SUPER WRONG!', request, response);
+  });
+
+}
+
 
                         //.......................API constractors................//
+
+//yelp constractor
+
+function Yelp(review) {
+  this.name = review.title;
+  this.image_url = review.image_url;
+  this.price = review.price;
+  this.rating = review.rating;
+  this.url = review.url;
+}
 
 //Movie constractor
 
