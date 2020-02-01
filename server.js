@@ -6,21 +6,13 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const superagent = require('superagent');
-const pg = require('pg');
 const PORT = process.env.PORT;
 const app = express();
 app.use(cors());
 
-const client = new pg.Client(process.env.DATABASE_URL);
-client.on('error', err => console.error(err));
-
 //this is our grouping of .get's that will grab our information
 app.get('/', (request, response) => {
   response.send('This is our Home Page');
-});
-
-app.get('/wrong', (request, response) => {
-  response.send('OOPS! You did it again. Wrong route.');
 });
 
 //Respond to front-end requests
@@ -30,59 +22,27 @@ app.get('/events', eventHandler);
 app.get('/movies', movieHandler);
 app.get('/yelp', yelpHandler);
 
+//Modules call functions
+const location = require('./modules/Location.js');
+const weather = require('./modules/Weather.js');
 
 // location callback
 function locationCallback (request, response) {
   let city = request.query.city;
-  let SQL = `SELECT * FROM locations WHERE searchquery='${city}';`;
+  console.log(request.query);
+  location.getLocationData(city)
+    .then( data => sendJson(data, response))
+    .catch((error) => errorHandler(error, request, response));
+}
 
-  client.query(SQL)
-    .then(results => {
-      if (results.rows.length > 0){
-        response.send(results.rows[0]);
-      } else {
-        try {
-          let key = process.env.GEOCODE_API_KEY;
-          let url = `https://us1.locationiq.com/v1/search.php?key=${key}&q=${city}&format=json&limit=1`;
-
-          superagent.get(url)
-            .then( data => {
-              const geoData = data.body[0];
-              const location = new Location(city, geoData);
-              let {search_query, formatted_query, latitude, longitude} = location;
-              let apiToSQL = `INSERT INTO locations (searchquery, formattedquery, latitude, longitude) VALUES ('${search_query}','${formatted_query}', '${latitude}', '${longitude}')`;
-              client.query(apiToSQL);
-              response.send(location);
-            })
-            .catch( () => {
-              errorHandler('location broke', request, response);
-            });
-        }
-        catch(error){
-          errorHandler('Error 500! Something has gone wrong with the website server!', request, response);
-        }
-      }
-    });
+function weatherCallback (request, response){
+  const {latitude, longitude} = request.query;
+  weather(latitude, longitude)
+    .then( summaries => sendJson(summaries, response))
+    .catch((error) => errorHandler(error, request, response));
 }
 
 // weather callback
-function weatherCallback(request, response) {
-  let key = process.env.WEATHER_API_KEY;
-  let latitude = request.query.latitude;
-  let longitude = request.query.longitude;
-  let url = `https://api.darksky.net/forecast/${key}/${latitude},${longitude}`;
-
-  superagent.get(url)
-    .then(data => {
-      const forecastData = data.body.daily.data.map( obj => {
-        return new Weather(obj);
-      });
-      response.status(200).json(forecastData);
-    })
-    .catch(() => {
-      errorHandler('Error 500! Something has gone wrong with the website server!', request, response);
-    });
-}
 
 // eventHandler function
 
@@ -105,7 +65,7 @@ function eventHandler(request, response) {
     });
 }
 
-//MovieHundler function
+//MovieHandler function
 
 function movieHandler(request, response) {
   let city = request.query.searchQuery;
@@ -174,29 +134,15 @@ function Event(event) {
   this.summary = event.description;
 }
 
-// weather constructor
-function Weather(day) {
-  this.forecast = day.summary;
-  this.time = new Date(day.time * 1000).toString().slice(0,15);
-}
-
-// location constructor
-function Location(city, geoData){
-  this.searchQuery = city;
-  this.formattedQuery = geoData.display_name;
-  this.latitude = geoData.lat;
-  this.longitude = geoData.lon;
-}
 
 // error handler
 function errorHandler(error, request, response) {
   response.status(500).send(error);
 }
 
+function sendJson(data, response){
+  response.status(200).send(data);
+}
+
 // server listener
-client.connect()
-  .then( () => {
-    app.listen(PORT, () => {
-      console.log(`server up on ${PORT}`);
-    });
-  });
+app.listen(PORT, () => console.log(`server up on ${PORT}`));
