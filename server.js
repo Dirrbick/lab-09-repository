@@ -141,8 +141,7 @@ function yelpHandler(request, response) {
 
 }
 
-
-                        //.......................API constractors................//
+//..................................API constractors...............................//
 
 //yelp constractor
 
